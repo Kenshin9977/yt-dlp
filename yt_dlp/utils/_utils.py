@@ -5476,6 +5476,57 @@ class FormatSorter:
 class _YDLLogger:
     def __init__(self, ydl=None):
         self._ydl = ydl
+class FormatProgressInfos:
+    @staticmethod
+    def format_seconds(seconds):
+        if seconds is None:
+            return ' Unknown'
+        time = timetuple_from_msec(seconds * 1000)
+        if time.hours > 99:
+            return '--:--:--'
+        if not time.hours:
+            return '%02d:%02d' % time[1:-1]
+        return '%02d:%02d:%02d' % time[:-1]
+
+    format_eta = format_seconds
+
+    @staticmethod
+    def calc_percent(byte_counter, data_len):
+        if data_len is None:
+            return None
+        return float(byte_counter) / float(data_len) * 100.0
+
+    @staticmethod
+    def format_percent(percent):
+        return '  N/A%' if percent is None else f'{percent:>5.1f}%'
+
+    @staticmethod
+    def calc_eta(start, now, total, current):
+        if total is None:
+            return None
+        if now is None:
+            now = time.time()
+        dif = now - start
+        if current == 0 or dif < 0.001:  # One millisecond
+            return None
+        rate = float(current) / dif
+        return int((float(total) - float(current)) / rate)
+
+    @staticmethod
+    def calc_speed(start, now, bytes):
+        dif = now - start
+        if bytes == 0 or dif < 0.001:  # One millisecond
+            return None
+        return float(bytes) / dif
+
+    @staticmethod
+    def format_speed(speed):
+        return ' Unknown B/s' if speed is None else f'{format_bytes(speed):>10s}/s'
+
+
+# Deprecated
+has_certifi = bool(certifi)
+has_websockets = bool(websockets)
 
     def debug(self, message):
         if self._ydl:
