@@ -1,8 +1,8 @@
 name: Sync upstream and publish
 
 on:
-  schedule:
-    - cron: '0 6 * * *'  # daily at 06:00 UTC
+  repository_dispatch:
+    types: [sync-upstream]
   workflow_dispatch:
 
 permissions:
@@ -13,10 +13,10 @@ jobs:
   sync-and-publish:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout package branch
+      - name: Checkout master branch
         uses: actions/checkout@v4
         with:
-          ref: package
+          ref: master
           fetch-depth: 0
 
       - name: Configure git
@@ -24,10 +24,11 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-      - name: Fetch upstream
+      - name: Fetch upstream and package branch
         run: |
           git remote add upstream https://github.com/yt-dlp/yt-dlp.git || true
           git fetch upstream master
+          git fetch origin package
 
       - name: Check for new upstream commits
         id: check-new
@@ -42,8 +43,8 @@ jobs:
             echo "New upstream commits found"
           fi
 
-      - name: Merge upstream
-        id: merge
+      - name: Merge upstream into master
+        id: merge-master
         if: steps.check-new.outputs.already-up-to-date == 'false'
         run: |
           if git merge upstream/master --no-edit; then
@@ -57,26 +58,60 @@ jobs:
             git merge --abort
           fi
 
-      - name: Notify conflict via Pushover
-        if: steps.merge.outputs.merge-ok == 'false'
+      - name: Notify master conflict via Pushover
+        if: steps.merge-master.outputs.merge-ok == 'false'
         run: |
           curl -s -F "token=${{ secrets.PUSHOVER_API_TOKEN }}" \
                -F "user=${{ secrets.PUSHOVER_USER_KEY }}" \
-               -F "title=yt-dlp sync failed" \
-               -F "message=Merge conflict with upstream. Conflicting files: ${{ steps.merge.outputs.conflicts }}" \
+               -F "title=yt-dlp sync failed (master)" \
+               -F "message=Merge conflict merging upstream into master. Conflicting files: ${{ steps.merge-master.outputs.conflicts }}" \
                -F "priority=1" \
                https://api.pushover.net/1/messages.json
 
-      - name: Fail on conflict
-        if: steps.merge.outputs.merge-ok == 'false'
+      - name: Fail on master conflict
+        if: steps.merge-master.outputs.merge-ok == 'false'
         run: exit 1
 
-      - name: Push merge
-        if: steps.merge.outputs.merge-ok == 'true'
+      - name: Push master
+        if: steps.merge-master.outputs.merge-ok == 'true'
+        run: git push origin master
+
+      - name: Merge master into package
+        id: merge-package
+        if: steps.merge-master.outputs.merge-ok == 'true'
+        run: |
+          git checkout origin/package -B package
+          if git merge master --no-edit; then
+            echo "merge-ok=true" >> "$GITHUB_OUTPUT"
+          else
+            CONFLICTS=$(git diff --name-only --diff-filter=U | head -20)
+            echo "merge-ok=false" >> "$GITHUB_OUTPUT"
+            echo "conflicts<<EOF" >> "$GITHUB_OUTPUT"
+            echo "$CONFLICTS" >> "$GITHUB_OUTPUT"
+            echo "EOF" >> "$GITHUB_OUTPUT"
+            git merge --abort
+          fi
+
+      - name: Notify package conflict via Pushover
+        if: steps.merge-package.outputs.merge-ok == 'false'
+        run: |
+          curl -s -F "token=${{ secrets.PUSHOVER_API_TOKEN }}" \
+               -F "user=${{ secrets.PUSHOVER_USER_KEY }}" \
+               -F "title=yt-dlp sync failed (package)" \
+               -F "message=Merge conflict merging master into package. Conflicting files: ${{ steps.merge-package.outputs.conflicts }}" \
+               -F "priority=1" \
+               https://api.pushover.net/1/messages.json
+
+      - name: Fail on package conflict
+        if: steps.merge-package.outputs.merge-ok == 'false'
+        run: exit 1
+
+      - name: Push package
+        if: steps.merge-package.outputs.merge-ok == 'true'
         run: git push origin package
 
       - name: Get version
-        if: steps.check-new.outputs.already-up-to-date == 'false' && steps.merge.outputs.merge-ok == 'true'
+        if: steps.merge-package.outputs.merge-ok == 'true'
         id: version
         run: |
           VERSION=$(python -c "exec(open('yt_dlp/version.py').read()); print(_pkg_version)")
