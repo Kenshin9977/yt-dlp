@@ -7,6 +7,7 @@ on:
 
 permissions:
   contents: write
+  id-token: write
 
 jobs:
   sync-and-publish:
@@ -116,8 +117,6 @@ jobs:
       - name: Publish to PyPI
         if: steps.check-pypi.outputs.already-published == 'false'
         uses: pypa/gh-action-pypi-publish@release/v1
-        with:
-          password: ${{ secrets.PYPI_API_TOKEN }}
 
       - name: Notify publish success via Pushover
         if: steps.check-pypi.outputs.already-published == 'false'
