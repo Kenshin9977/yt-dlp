@@ -394,6 +394,7 @@ class VKIE(VKBaseIE):
         video_id = mobj.group('videoid')
 
         mv_data = {}
+        is_embedded = not video_id
         if video_id:
             data = {
                 'act': 'show',
@@ -466,10 +467,6 @@ class VKIE(VKBaseIE):
                 if re.search(error_re, info_page):
                     raise ExtractorError(error_msg % video_id, expected=True)
 
-            player = self._parse_json(self._search_regex(
-                r'var\s+playerParams\s*=\s*({.+?})\s*;\s*\n',
-                info_page, 'player params'), video_id)
-
         youtube_url = YoutubeIE._extract_url(info_page)
         if youtube_url:
             return self.url_result(youtube_url, YoutubeIE.ie_key())
@@ -505,6 +502,55 @@ class VKIE(VKBaseIE):
                 if opts_url.startswith('//'):
                     opts_url = 'https:' + opts_url
                 return self.url_result(opts_url)
+
+        if is_embedded:
+            # New VK embed format uses apiPrefetchCache with video.get response
+            api_data = traverse_obj(
+                self._search_json(r'window\.cur\s*=\s*Object\.assign\(window\.cur\s*\|\|\s*\{\}\s*,',
+                                  info_page, 'api data', video_id, default=None),
+                ('apiPrefetchCache', lambda _, v: v['method'] == 'video.get',
+                 'response', 'items', 0, any))
+            if api_data:
+                formats = []
+                subtitles = {}
+                for format_id, format_url in traverse_obj(api_data, ('files', {dict.items}, lambda _, v: url_or_none(v[1]))):
+                    if format_id.startswith('mp4_'):
+                        formats.append({
+                            'format_id': format_id,
+                            'url': format_url,
+                            'ext': 'mp4',
+                            'height': int_or_none(format_id[4:]),
+                        })
+                    elif format_id.startswith('hls'):
+                        fmts, subs = self._extract_m3u8_formats_and_subtitles(
+                            format_url, video_id, 'mp4', 'm3u8_native',
+                            m3u8_id=format_id, fatal=False)
+                        formats.extend(fmts)
+                        self._merge_subtitles(subs, target=subtitles)
+                    elif format_id.startswith('dash'):
+                        fmts, subs = self._extract_mpd_formats_and_subtitles(
+                            format_url, video_id, mpd_id=format_id, fatal=False)
+                        formats.extend(fmts)
+                        self._merge_subtitles(subs, target=subtitles)
+
+                return {
+                    'id': video_id,
+                    'formats': formats,
+                    'subtitles': subtitles,
+                    **traverse_obj(api_data, {
+                        'title': ('title', {str}),
+                        'description': ('description', {clean_html}, filter),
+                        'thumbnail': ('image', ..., 'url', {url_or_none}, any),
+                        'duration': ('duration', {int_or_none}),
+                        'timestamp': ('date', {int_or_none}),
+                        'view_count': ('views', {int_or_none}),
+                        'like_count': ('likes', 'count', {int_or_none}),
+                    }),
+                }
+
+            player = self._parse_json(self._search_regex(
+                r'var\s+playerParams\s*=\s*({.+?})\s*;\s*\n',
+                info_page, 'player params'), video_id)
 
         data = player['params'][0]
 
