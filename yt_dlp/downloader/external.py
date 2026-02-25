@@ -370,7 +370,7 @@ class Aria2cFD(ExternalFD):
         try:
             with self.ydl.urlopen(request) as r:
                 resp = json.load(r)
-        except Exception as e:
+        except (OSError, ValueError) as e:
             raise ConnectionError(f'aria2c RPC {method} failed: {e}')
         if resp.get('id') != sanitycheck:
             raise ConnectionError('aria2c RPC response ID mismatch')
@@ -409,7 +409,8 @@ class Aria2cFD(ExternalFD):
                     send_rpc('aria2.getVersion')
                     rpc_ready = True
                     break
-                except Exception:
+                except ConnectionError:
+                    self.write_debug(f'[aria2c] Waiting for RPC server (attempt {_retry + 1}/20)')
                     time.sleep(0.1)
 
             if not rpc_ready:
@@ -424,7 +425,7 @@ class Aria2cFD(ExternalFD):
                     # Ref: https://aria2.github.io/manual/en/html/aria2c.html#aria2.tellActive
                     active = send_rpc('aria2.tellActive')
                     completed = send_rpc('aria2.tellStopped', [0, frag_count])
-                except Exception:
+                except ConnectionError:
                     self.to_screen('[aria2c] RPC connection lost, waiting for download to finish')
                     p.wait()
                     return '', p.stderr.read(), p.returncode
@@ -447,7 +448,7 @@ class Aria2cFD(ExternalFD):
                 self._hook_progress(status, info_dict)
 
                 if not active and len(completed) >= frag_count:
-                    with contextlib.suppress(Exception):
+                    with contextlib.suppress(ConnectionError):
                         send_rpc('aria2.shutdown')
                     retval = p.wait()
                     break
