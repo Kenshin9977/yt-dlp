@@ -79,6 +79,17 @@ class TestAria2cRPC(unittest.TestCase):
         with self.assertRaises(ConnectionError):
             dl.aria2c_rpc(19190, 'secret', 'aria2.getVersion')
 
+    def test_rpc_raises_on_invalid_json(self):
+        dl, ydl = self._make_downloader()
+
+        def fake_urlopen(request):
+            return _FakeRPCResponse(b'not json')
+
+        ydl.urlopen = fake_urlopen
+
+        with self.assertRaises(ConnectionError):
+            dl.aria2c_rpc(19190, 'secret', 'aria2.getVersion')
+
     def test_rpc_raises_on_id_mismatch(self):
         dl, ydl = self._make_downloader()
 
@@ -327,6 +338,74 @@ class TestAria2cRPCProgress(unittest.TestCase):
             self.assertEqual(s['speed'], 50000.0)
             self.assertIsNotNone(s.get('total_bytes'))
             self.assertIsNotNone(s.get('eta'))
+
+
+    def test_fragmented_download_progress(self):
+        with FakeYDL() as ydl:
+            dl = Aria2cFD(ydl, {})
+            progress_statuses = []
+            dl._hook_progress = lambda status, info: progress_statuses.append(dict(status))
+
+            info_dict = {
+                'url': 'http://example.com/video.mp4',
+                '_filename': 'test.mp4',
+                '__rpc': {'port': 19190, 'secret': 'test'},
+                'fragments': [
+                    {'url': 'http://example.com/frag0'},
+                    {'url': 'http://example.com/frag1'},
+                    {'url': 'http://example.com/frag2'},
+                ],
+            }
+
+            call_count = [0]
+
+            def fake_urlopen(request):
+                body = json.loads(request.data)
+                method = body['method']
+                call_count[0] += 1
+
+                if method == 'aria2.getVersion':
+                    result = {'version': '1.37.0'}
+                elif method == 'aria2.tellActive':
+                    if call_count[0] < 8:
+                        result = [{'completedLength': '200000', 'totalLength': '500000',
+                                   'downloadSpeed': '100000'}]
+                    else:
+                        result = []
+                elif method == 'aria2.tellStopped':
+                    if call_count[0] < 8:
+                        result = [{'totalLength': '500000', 'completedLength': '500000',
+                                   'downloadSpeed': '0'}]
+                    else:
+                        result = [
+                            {'totalLength': '500000', 'completedLength': '500000', 'downloadSpeed': '0'},
+                            {'totalLength': '500000', 'completedLength': '500000', 'downloadSpeed': '0'},
+                            {'totalLength': '500000', 'completedLength': '500000', 'downloadSpeed': '0'},
+                        ]
+                elif method == 'aria2.shutdown':
+                    result = 'OK'
+                else:
+                    result = None
+
+                return _FakeRPCResponse(_make_rpc_response(result, body['id']))
+
+            ydl.urlopen = fake_urlopen
+            mock_proc = _make_mock_proc([None] * 10 + [0])
+
+            with patch('yt_dlp.downloader.external.Popen', return_value=mock_proc):
+                with patch('time.sleep'):
+                    _, _, retval = dl._call_process(['aria2c', '--enable-rpc'], info_dict)
+
+            self.assertEqual(retval, 0)
+            self.assertTrue(len(progress_statuses) >= 2)
+            # Fragmented: total_bytes should be None, fragment_count should be 3
+            self.assertEqual(progress_statuses[0]['fragment_count'], 3)
+            self.assertEqual(progress_statuses[0]['fragment_index'], 0)
+            # During download, total_bytes should be None (fragmented mode)
+            active_statuses = [s for s in progress_statuses if s['downloaded_bytes'] > 0]
+            self.assertTrue(len(active_statuses) > 0)
+            self.assertIsNone(active_statuses[0]['total_bytes'])
+            self.assertIsNotNone(active_statuses[0].get('total_bytes_estimate'))
 
 
 if __name__ == '__main__':
