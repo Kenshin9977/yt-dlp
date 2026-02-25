@@ -129,11 +129,10 @@ def _make_mock_proc(poll_sequence, returncode=0):
     mock_proc = MagicMock()
     mock_proc.__enter__ = MagicMock(return_value=mock_proc)
     mock_proc.__exit__ = MagicMock(return_value=False)
-    mock_proc.stderr = MagicMock()
-    mock_proc.stderr.read = MagicMock(return_value='')
     mock_proc.returncode = returncode
     mock_proc.poll = MagicMock(side_effect=poll_sequence)
     mock_proc.wait = MagicMock(return_value=returncode)
+    mock_proc.communicate = MagicMock(return_value=('', ''))
     return mock_proc
 
 
@@ -406,6 +405,118 @@ class TestAria2cRPCProgress(unittest.TestCase):
             self.assertTrue(len(active_statuses) > 0)
             self.assertIsNone(active_statuses[0]['total_bytes'])
             self.assertIsNotNone(active_statuses[0].get('total_bytes_estimate'))
+
+
+    def test_eta_none_when_total_unknown(self):
+        """ETA must be None when total size is unknown (not crash with TypeError)."""
+        with FakeYDL() as ydl:
+            dl = Aria2cFD(ydl, {})
+            progress_statuses = []
+            dl._hook_progress = lambda status, info: progress_statuses.append(dict(status))
+
+            info_dict = {
+                'url': 'http://example.com/video.mp4',
+                '_filename': 'test.mp4',
+                '__rpc': {'port': 19190, 'secret': 'test'},
+            }
+
+            call_count = [0]
+
+            def fake_urlopen(request):
+                body = json.loads(request.data)
+                method = body['method']
+                call_count[0] += 1
+
+                if method == 'aria2.getVersion':
+                    result = {'version': '1.37.0'}
+                elif method == 'aria2.tellActive':
+                    if call_count[0] < 6:
+                        # completedLength > totalLength triggers total=None
+                        result = [{'completedLength': '600000', 'totalLength': '500000',
+                                   'downloadSpeed': '100000'}]
+                    else:
+                        result = []
+                elif method == 'aria2.tellStopped':
+                    if call_count[0] < 6:
+                        result = []
+                    else:
+                        result = [{'totalLength': '500000', 'completedLength': '500000',
+                                   'downloadSpeed': '0'}]
+                elif method == 'aria2.shutdown':
+                    result = 'OK'
+                else:
+                    result = None
+
+                return _FakeRPCResponse(_make_rpc_response(result, body['id']))
+
+            ydl.urlopen = fake_urlopen
+            mock_proc = _make_mock_proc([None] * 10 + [0])
+
+            with patch('yt_dlp.downloader.external.Popen', return_value=mock_proc):
+                with patch('time.sleep'):
+                    # This must not raise TypeError
+                    _, _, retval = dl._call_process(['aria2c', '--enable-rpc'], info_dict)
+
+            self.assertEqual(retval, 0)
+            active_statuses = [s for s in progress_statuses if s['downloaded_bytes'] > 0]
+            self.assertTrue(len(active_statuses) > 0)
+            self.assertIsNone(active_statuses[0]['eta'])
+            self.assertIsNone(active_statuses[0]['total_bytes_estimate'])
+
+    def test_eta_none_when_speed_zero(self):
+        """ETA must be None when speed is 0 (not astronomically large)."""
+        with FakeYDL() as ydl:
+            dl = Aria2cFD(ydl, {})
+            progress_statuses = []
+            dl._hook_progress = lambda status, info: progress_statuses.append(dict(status))
+
+            info_dict = {
+                'url': 'http://example.com/video.mp4',
+                '_filename': 'test.mp4',
+                '__rpc': {'port': 19190, 'secret': 'test'},
+            }
+
+            call_count = [0]
+
+            def fake_urlopen(request):
+                body = json.loads(request.data)
+                method = body['method']
+                call_count[0] += 1
+
+                if method == 'aria2.getVersion':
+                    result = {'version': '1.37.0'}
+                elif method == 'aria2.tellActive':
+                    if call_count[0] < 6:
+                        result = [{'completedLength': '100000', 'totalLength': '1000000',
+                                   'downloadSpeed': '0'}]
+                    else:
+                        result = []
+                elif method == 'aria2.tellStopped':
+                    if call_count[0] < 6:
+                        result = []
+                    else:
+                        result = [{'totalLength': '1000000', 'completedLength': '1000000',
+                                   'downloadSpeed': '0'}]
+                elif method == 'aria2.shutdown':
+                    result = 'OK'
+                else:
+                    result = None
+
+                return _FakeRPCResponse(_make_rpc_response(result, body['id']))
+
+            ydl.urlopen = fake_urlopen
+            mock_proc = _make_mock_proc([None] * 10 + [0])
+
+            with patch('yt_dlp.downloader.external.Popen', return_value=mock_proc):
+                with patch('time.sleep'):
+                    _, _, retval = dl._call_process(['aria2c', '--enable-rpc'], info_dict)
+
+            self.assertEqual(retval, 0)
+            active_statuses = [s for s in progress_statuses if s['downloaded_bytes'] > 0]
+            self.assertTrue(len(active_statuses) > 0)
+            # speed=0 → eta should be None, not a huge number
+            self.assertIsNone(active_statuses[0]['eta'])
+            self.assertIsNone(active_statuses[0]['speed'])
 
 
 if __name__ == '__main__':
