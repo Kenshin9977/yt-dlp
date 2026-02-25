@@ -1,3 +1,4 @@
+import contextlib
 import enum
 import functools
 import json
@@ -288,8 +289,7 @@ class Aria2cFD(ExternalFD):
         return fn if os.path.isabs(fn) else f'.{os.path.sep}{fn}'
 
     def _call_downloader(self, tmpfilename, info_dict):
-        # FIXME: Disabled due to https://github.com/yt-dlp/yt-dlp/issues/5931
-        if False and 'no-external-downloader-progress' not in self.params.get('compat_opts', []):
+        if 'no-external-downloader-progress' not in self.params.get('compat_opts', []):
             info_dict['__rpc'] = {
                 'port': find_available_port() or 19190,
                 'secret': str(uuid.uuid4()),
@@ -367,16 +367,21 @@ class Aria2cFD(ExternalFD):
                 'Content-Type': 'application/json',
                 'Content-Length': f'{len(d)}',
             }, proxies={'all': None})
-        with self.ydl.urlopen(request) as r:
-            resp = json.load(r)
-        assert resp.get('id') == sanitycheck, 'Something went wrong with RPC server'
+        try:
+            with self.ydl.urlopen(request) as r:
+                resp = json.load(r)
+        except Exception as e:
+            raise ConnectionError(f'aria2c RPC {method} failed: {e}')
+        if resp.get('id') != sanitycheck:
+            raise ConnectionError('aria2c RPC response ID mismatch')
         return resp['result']
 
     def _call_process(self, cmd, info_dict):
         if '__rpc' not in info_dict:
             return super()._call_process(cmd, info_dict)
 
-        send_rpc = functools.partial(self.aria2c_rpc, info_dict['__rpc']['port'], info_dict['__rpc']['secret'])
+        send_rpc = functools.partial(
+            self.aria2c_rpc, info_dict['__rpc']['port'], info_dict['__rpc']['secret'])
         started = time.time()
 
         fragmented = 'fragments' in info_dict
@@ -389,22 +394,40 @@ class Aria2cFD(ExternalFD):
             'fragment_count': frag_count if fragmented else None,
             'fragment_index': 0 if fragmented else None,
         }
-        self._hook_progress(status, info_dict)
 
         def get_stat(key, *obj, average=False):
             val = tuple(filter(None, map(float, traverse_obj(obj, (..., ..., key))))) or [0]
             return sum(val) / (len(val) if average else 1)
 
         with Popen(cmd, text=True, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE) as p:
-            # Add a small sleep so that RPC client can receive response,
-            # or the connection stalls infinitely
-            time.sleep(0.2)
+            # Wait for RPC server to become ready (retry up to 2s)
+            rpc_ready = False
+            for _retry in range(20):
+                if p.poll() is not None:
+                    break
+                try:
+                    send_rpc('aria2.getVersion')
+                    rpc_ready = True
+                    break
+                except Exception:
+                    time.sleep(0.1)
+
+            if not rpc_ready:
+                self.to_screen('[aria2c] RPC server not available, progress tracking disabled')
+                p.wait()
+                return '', p.stderr.read(), p.returncode
+
+            self._hook_progress(status, info_dict)
             retval = p.poll()
             while retval is None:
-                # We don't use tellStatus as we won't know the GID without reading stdout
-                # Ref: https://aria2.github.io/manual/en/html/aria2c.html#aria2.tellActive
-                active = send_rpc('aria2.tellActive')
-                completed = send_rpc('aria2.tellStopped', [0, frag_count])
+                try:
+                    # Ref: https://aria2.github.io/manual/en/html/aria2c.html#aria2.tellActive
+                    active = send_rpc('aria2.tellActive')
+                    completed = send_rpc('aria2.tellStopped', [0, frag_count])
+                except Exception:
+                    self.to_screen('[aria2c] RPC connection lost, waiting for download to finish')
+                    p.wait()
+                    return '', p.stderr.read(), p.returncode
 
                 downloaded = get_stat('totalLength', completed) + get_stat('completedLength', active)
                 speed = get_stat('downloadSpeed', active)
@@ -424,7 +447,8 @@ class Aria2cFD(ExternalFD):
                 self._hook_progress(status, info_dict)
 
                 if not active and len(completed) >= frag_count:
-                    send_rpc('aria2.shutdown')
+                    with contextlib.suppress(Exception):
+                        send_rpc('aria2.shutdown')
                     retval = p.wait()
                     break
 
