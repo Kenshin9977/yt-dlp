@@ -396,7 +396,7 @@ class Aria2cFD(ExternalFD):
         }
 
         def get_stat(key, *obj, average=False):
-            val = tuple(filter(None, map(float, traverse_obj(obj, (..., ..., key))))) or [0]
+            val = tuple(map(float, filter(lambda v: v is not None, traverse_obj(obj, (..., ..., key))))) or [0]
             return sum(val) / (len(val) if average else 1)
 
         with Popen(cmd, text=True, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE) as p:
@@ -415,8 +415,8 @@ class Aria2cFD(ExternalFD):
 
             if not rpc_ready:
                 self.to_screen('[aria2c] RPC server not available, progress tracking disabled')
-                p.wait()
-                return '', p.stderr.read(), p.returncode
+                _, stderr = p.communicate()
+                return '', stderr, p.returncode
 
             self._hook_progress(status, info_dict)
             retval = p.poll()
@@ -427,8 +427,8 @@ class Aria2cFD(ExternalFD):
                     completed = send_rpc('aria2.tellStopped', [0, frag_count])
                 except ConnectionError:
                     self.to_screen('[aria2c] RPC connection lost, waiting for download to finish')
-                    p.wait()
-                    return '', p.stderr.read(), p.returncode
+                    _, stderr = p.communicate()
+                    return '', stderr, p.returncode
 
                 downloaded = get_stat('totalLength', completed) + get_stat('completedLength', active)
                 speed = get_stat('downloadSpeed', active)
@@ -436,12 +436,16 @@ class Aria2cFD(ExternalFD):
                 if total < downloaded:
                     total = None
 
+                eta = None
+                if total is not None and speed:
+                    eta = (total - downloaded) / speed
+
                 status.update({
                     'downloaded_bytes': int(downloaded),
-                    'speed': speed,
+                    'speed': speed or None,
                     'total_bytes': None if fragmented else total,
                     'total_bytes_estimate': total,
-                    'eta': (total - downloaded) / (speed or 1),
+                    'eta': eta,
                     'fragment_index': min(frag_count, len(completed) + 1) if fragmented else None,
                     'elapsed': time.time() - started,
                 })
@@ -456,7 +460,8 @@ class Aria2cFD(ExternalFD):
                 time.sleep(0.1)
                 retval = p.poll()
 
-            return '', p.stderr.read(), retval
+            _, stderr = p.communicate()
+            return '', stderr, retval
 
 
 class HttpieFD(ExternalFD):
