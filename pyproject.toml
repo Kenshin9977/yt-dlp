@@ -3,7 +3,7 @@ requires = ["hatchling>=1.27.0"]
 build-backend = "hatchling.build"
 
 [project]
-name = "yt-dlp-progress"
+name = "yt-dlp-enhanced-progress"
 authors = [
     {name = "Kenshin9977"},
 ]
