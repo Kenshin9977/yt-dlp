@@ -420,61 +420,66 @@ class Aria2cFD(ExternalFD):
                 _, stderr = p.communicate()
                 return '', stderr, p.returncode
 
-            self._hook_progress(status, info_dict)
-            retval = p.poll()
-            idle_since = None
-            while retval is None:
-                try:
-                    # Ref: https://aria2.github.io/manual/en/html/aria2c.html#aria2.tellActive
-                    active = send_rpc('aria2.tellActive')
-                    completed = send_rpc('aria2.tellStopped', [0, frag_count])
-                except ConnectionError:
-                    self.to_screen('[aria2c] RPC connection lost, waiting for download to finish')
-                    _, stderr = p.communicate()
-                    return '', stderr, p.returncode
-
-                downloaded = get_stat('totalLength', completed) + get_stat('completedLength', active)
-                speed = get_stat('downloadSpeed', active)
-                total = frag_count * get_stat('totalLength', active, completed, average=True)
-                if total < downloaded:
-                    total = None
-
-                eta = None
-                if total is not None and speed:
-                    eta = (total - downloaded) / speed
-
-                status.update({
-                    'downloaded_bytes': int(downloaded),
-                    'speed': speed or None,
-                    'total_bytes': None if fragmented else total,
-                    'total_bytes_estimate': total,
-                    'eta': eta,
-                    'fragment_index': min(frag_count, len(completed) + 1) if fragmented else None,
-                    'elapsed': time.time() - started,
-                })
+            try:
                 self._hook_progress(status, info_dict)
+                retval = p.poll()
+                idle_since = None
+                while retval is None:
+                    try:
+                        # Ref: https://aria2.github.io/manual/en/html/aria2c.html#aria2.tellActive
+                        active = send_rpc('aria2.tellActive')
+                        completed = send_rpc('aria2.tellStopped', [0, frag_count])
+                    except ConnectionError:
+                        self.to_screen('[aria2c] RPC connection lost, waiting for download to finish')
+                        _, stderr = p.communicate()
+                        return '', stderr, p.returncode
 
-                if not active and len(completed) >= frag_count:
-                    with contextlib.suppress(ConnectionError):
-                        send_rpc('aria2.shutdown')
-                    retval = p.wait()
-                    break
+                    downloaded = get_stat('totalLength', completed) + get_stat('completedLength', active)
+                    speed = get_stat('downloadSpeed', active)
+                    total = frag_count * get_stat('totalLength', active, completed, average=True)
+                    if total < downloaded:
+                        total = None
 
-                # Detect stall: no active downloads and no completed downloads
-                if not active and not completed:
-                    if idle_since is None:
-                        idle_since = time.time()
-                    elif time.time() - idle_since > 10:
-                        self.to_screen('[aria2c] RPC reports no active or completed downloads, shutting down')
+                    eta = None
+                    if total is not None and speed:
+                        eta = (total - downloaded) / speed
+
+                    status.update({
+                        'downloaded_bytes': int(downloaded),
+                        'speed': speed or None,
+                        'total_bytes': None if fragmented else total,
+                        'total_bytes_estimate': total,
+                        'eta': eta,
+                        'fragment_index': min(frag_count, len(completed) + 1) if fragmented else None,
+                        'elapsed': time.time() - started,
+                    })
+                    self._hook_progress(status, info_dict)
+
+                    if not active and len(completed) >= frag_count:
                         with contextlib.suppress(ConnectionError):
                             send_rpc('aria2.shutdown')
                         retval = p.wait()
                         break
-                else:
-                    idle_since = None
 
-                time.sleep(0.1)
-                retval = p.poll()
+                    # Detect stall: no active downloads and no completed downloads
+                    if not active and not completed:
+                        if idle_since is None:
+                            idle_since = time.time()
+                        elif time.time() - idle_since > 10:
+                            self.to_screen('[aria2c] RPC reports no active or completed downloads, shutting down')
+                            with contextlib.suppress(ConnectionError):
+                                send_rpc('aria2.shutdown')
+                            retval = p.wait()
+                            break
+                    else:
+                        idle_since = None
+
+                    time.sleep(0.1)
+                    retval = p.poll()
+            except Exception:
+                p.kill()
+                p.wait()
+                raise
 
             _, stderr = p.communicate()
             return '', stderr, retval
