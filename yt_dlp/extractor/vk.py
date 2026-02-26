@@ -201,6 +201,22 @@ class VKIE(VKBaseIE):
             'params': {'skip_download': 'm3u8'},
         },
         {
+            'note': 'Embedded video, apiPrefetchCache format',
+            'url': 'https://vk.com/video_ext.php?oid=646754736&id=456239022&hd=2',
+            'info_dict': {
+                'id': '646754736_456239022',
+                'ext': 'mp4',
+                'title': 'Beyblade.S01E24.Viva Las Vegas',
+                'duration': 1316,
+                'timestamp': 1739401764,
+                'upload_date': '20250212',
+                'thumbnail': r're:https?://.+',
+                'view_count': int,
+                'like_count': int,
+            },
+            'params': {'skip_download': 'm3u8'},
+        },
+        {
             'note': 'Embedded video, new apiPrefetchCache format',
             'url': 'https://vk.com/video_ext.php?oid=646754736&id=456239022&hd=2',
             'info_dict': {
@@ -569,7 +585,7 @@ class VKIE(VKBaseIE):
                     'formats': formats,
                     'subtitles': subtitles,
                     **traverse_obj(api_data, {
-                        'title': ('title', {str}),
+                        'title': ('title', {str}, {unescapeHTML}),
                         'description': ('description', {clean_html}, filter),
                         'thumbnail': ('image', -1, 'url', {url_or_none}),
                         'duration': ('duration', {int_or_none}),
