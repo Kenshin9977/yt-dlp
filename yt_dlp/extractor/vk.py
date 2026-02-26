@@ -184,6 +184,17 @@ class VKIE(VKBaseIE):
             'params': {'skip_download': 'm3u8'},
         },
         {
+            'note': 'Embedded video, new apiPrefetchCache format',
+            'url': 'https://vk.com/video_ext.php?oid=646754736&id=456239022&hd=2',
+            'info_dict': {
+                'id': '646754736_456239022',
+                'ext': 'mp4',
+                'title': 'Beyblade.S01E24.Viva Las Vegas',
+                'duration': 1316,
+                'thumbnail': r're:https?://.+',
+            },
+        },
+        {
             'url': 'https://vk.com/video-93049196_456239755?list=ln-cBjJ7S4jYYx3ADnmDT',
             'info_dict': {
                 'id': '-93049196_456239755',
@@ -504,16 +515,19 @@ class VKIE(VKBaseIE):
                 return self.url_result(opts_url)
 
         if is_embedded:
-            # New VK embed format uses apiPrefetchCache with video.get response
             api_data = traverse_obj(
-                self._search_json(r'window\.cur\s*=\s*Object\.assign\(window\.cur\s*\|\|\s*\{\}\s*,',
-                                  info_page, 'api data', video_id, default=None),
+                self._search_json(
+                    r'window\.cur\s*=\s*Object\.assign\(window\.cur\s*\|\|\s*\{\}\s*,',
+                    info_page, 'api data', video_id, default=None),
                 ('apiPrefetchCache', lambda _, v: v['method'] == 'video.get',
                  'response', 'items', 0, any))
             if api_data:
                 formats = []
                 subtitles = {}
-                for format_id, format_url in traverse_obj(api_data, ('files', {dict.items}, lambda _, v: url_or_none(v[1]))):
+                for format_id, format_url in (api_data.get('files') or {}).items():
+                    format_url = url_or_none(format_url)
+                    if not format_url:
+                        continue
                     if format_id.startswith('mp4_'):
                         formats.append({
                             'format_id': format_id,
@@ -540,7 +554,7 @@ class VKIE(VKBaseIE):
                     **traverse_obj(api_data, {
                         'title': ('title', {str}),
                         'description': ('description', {clean_html}, filter),
-                        'thumbnail': ('image', ..., 'url', {url_or_none}, any),
+                        'thumbnail': ('image', -1, 'url', {url_or_none}),
                         'duration': ('duration', {int_or_none}),
                         'timestamp': ('date', {int_or_none}),
                         'view_count': ('views', {int_or_none}),
