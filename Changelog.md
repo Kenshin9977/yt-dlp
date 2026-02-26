@@ -4,6 +4,50 @@
 # To create a release, dispatch the https://github.com/yt-dlp/yt-dlp/actions/workflows/release.yml workflow on master
 -->
 
+### 2026.02.26.100903
+
+#### Core changes
+- [Add daily upstream sync and PyPI publish workflow](https://github.com/yt-dlp/yt-dlp/commit/deab641ffd50af6f92f1cc84374b8b83ff8f1d8e) by [pukkandan](https://github.com/pukkandan)
+- [Add ffmpeg progress tracking to FFmpegFD](https://github.com/yt-dlp/yt-dlp/commit/7e22007b14f95f0df1585a1c3be704b9154046d2) by [pukkandan](https://github.com/pukkandan)
+- [Add test and clean up code style](https://github.com/yt-dlp/yt-dlp/commit/e1b571c688a2f1d5de02234d519b7e7a6e03bc4e) by [pukkandan](https://github.com/pukkandan)
+- [Add tests for FFmpegProgressTracker](https://github.com/yt-dlp/yt-dlp/commit/8ec9321fe4a3e82d2a47fb008d20cd721b9f2d08) by [pukkandan](https://github.com/pukkandan)
+- [Add tests for aria2c RPC progress tracking](https://github.com/yt-dlp/yt-dlp/commit/c2589e15c27320e4606d4d8c34211a12a2e4eb08) by [pukkandan](https://github.com/pukkandan)
+- [Fix ETA crash, zero-value filtering, and stderr deadlock](https://github.com/yt-dlp/yt-dlp/commit/fbaa3b73920e7559f27885c3769be99b2d073afe) by [pukkandan](https://github.com/pukkandan)
+- [Fix FFmpegProgressTracker bugs and regressions](https://github.com/yt-dlp/yt-dlp/commit/b6eca79a4b6e4486132d4ffa386326800e055b51) by [pukkandan](https://github.com/pukkandan)
+- [Fix autopep8 extra blank lines](https://github.com/yt-dlp/yt-dlp/commit/d185652eb5fc8473742a61f3536573287afb78bb) by [pukkandan](https://github.com/pukkandan)
+- [Fix missing newline in stderr line accumulation](https://github.com/yt-dlp/yt-dlp/commit/7a0d0472f9fc6cdcf87318cde9ee5608c4371f1d) by [pukkandan](https://github.com/pukkandan)
+- [Fix progress display bugs and harden edge cases](https://github.com/yt-dlp/yt-dlp/commit/485c563938436c2c997e69ad6ffb097178dc7f40) by [pukkandan](https://github.com/pukkandan)
+- [Fix queue race, ETA semantics, console title percent](https://github.com/yt-dlp/yt-dlp/commit/95410c6bff2aa15af45acd168feb49bc8e044f99) by [pukkandan](https://github.com/pukkandan)
+- [Fix ruff lint errors](https://github.com/yt-dlp/yt-dlp/commit/94fbb72425943bbc8e52d884e3e98d695b536806) by [pukkandan](https://github.com/pukkandan)
+- [Merge branch 'ffmpeg-progress-tracking' into package](https://github.com/yt-dlp/yt-dlp/commit/4b5e7859d997769f98dbd7a3df00ccb4241a2e20) by [pukkandan](https://github.com/pukkandan)
+- [Merge branch 'ffmpeg-progress-tracking' into package](https://github.com/yt-dlp/yt-dlp/commit/c23bf8b3a7456fad53e92dc035f1823f96d5a9e3) by [pukkandan](https://github.com/pukkandan)
+- [Merge branch 'ffmpeg-progress-tracking' into package](https://github.com/yt-dlp/yt-dlp/commit/0d33a416896fb391b4bf7197b7875a60c0554f42) by [pukkandan](https://github.com/pukkandan)
+- [Merge branch 'ffmpeg-progress-tracking' into package](https://github.com/yt-dlp/yt-dlp/commit/f0d99a43f32d1b549e5da68c75f69df5da55f20b) by [pukkandan](https://github.com/pukkandan)
+- [Merge branch 'vk-embed-api-format' into package](https://github.com/yt-dlp/yt-dlp/commit/aebf824f6d8d07c285a5fc0dad885108c75c0cc9) by [pukkandan](https://github.com/pukkandan)
+- [Merge branch 'vk-embed-api-format' into package](https://github.com/yt-dlp/yt-dlp/commit/00442b0e3bf495886e3d6bba9eeb70275c6d4db2) by [pukkandan](https://github.com/pukkandan)
+- [Merge branch 'vk-embed-api-format' into package](https://github.com/yt-dlp/yt-dlp/commit/821c748d4fad3107da16070062eb06eafe2b4bbe) by [pukkandan](https://github.com/pukkandan)
+- [Merge branch 'vk-embed-api-format' into package](https://github.com/yt-dlp/yt-dlp/commit/f86b4c5aabcbe377b41c92848f14f7d61633aabd) by [pukkandan](https://github.com/pukkandan)
+- [Package as yt-dlp-ffmpeg-progress for PyPI](https://github.com/yt-dlp/yt-dlp/commit/36b8fe618c6fe6ab49c2f201439993f8da7eba79) by [pukkandan](https://github.com/pukkandan)
+- [Re-enable aria2c RPC progress with retry and fallback](https://github.com/yt-dlp/yt-dlp/commit/24b31c3dd4d37a689636d904edd37a708b75cb20) by [pukkandan](https://github.com/pukkandan)
+- [Refactor tests: deduplicate helpers, precise assertions, new cases](https://github.com/yt-dlp/yt-dlp/commit/cbbf8435e74be7eae49fad0ab301fe269d9ee109) by [pukkandan](https://github.com/pukkandan)
+- [Remove workflow (moved to yt-dlp-publisher repo)](https://github.com/yt-dlp/yt-dlp/commit/787d1696c1b0ea4914d5f92b45b37fdad6fa0cc1) by [pukkandan](https://github.com/pukkandan)
+- [Rename PyPI package to yt-dlp-enhanced-progress](https://github.com/yt-dlp/yt-dlp/commit/f59a4b823ac9d7dc99364834e2fa0ca424447ce6) by [pukkandan](https://github.com/pukkandan)
+- [Rename package to yt-dlp-progress](https://github.com/yt-dlp/yt-dlp/commit/c260b2af9ee5af65c325c04d636b42d93dc5c5c1) by [pukkandan](https://github.com/pukkandan)
+- [Restructure workflow: sync master then package, use repository_dispatch](https://github.com/yt-dlp/yt-dlp/commit/cf96803fa9f9c72ee95bb90a6dea010f88690730) by [pukkandan](https://github.com/pukkandan)
+- [Skip RPC setup when no port available](https://github.com/yt-dlp/yt-dlp/commit/61dff424bb78578c4801b45d58f95fac4825b365) by [pukkandan](https://github.com/pukkandan)
+- [Use PyPI Trusted Publisher instead of API token](https://github.com/yt-dlp/yt-dlp/commit/56aa4d699f10306be86c96054609b9929e22edbe) by [pukkandan](https://github.com/pukkandan)
+- **vk**: [Support new embed page API format](https://github.com/yt-dlp/yt-dlp/commit/46143c8cfc773a3b84caba527152ae2579c0f0e3) by [pukkandan](https://github.com/pukkandan)
+
+#### Extractor changes
+- **aenetworks**: [Fix extraction](https://github.com/yt-dlp/yt-dlp/commit/338dbebdb8627a95bd8f72ed86fdc2d50c8e2d14) ([#16036](https://github.com/yt-dlp/yt-dlp/issues/16036)) by [bashonly](https://github.com/bashonly)
+- **thechosen**: [Rework extractor](https://github.com/yt-dlp/yt-dlp/commit/e3118604aa99a5514342d6a002c9b4a3fe1235b4) ([#16021](https://github.com/yt-dlp/yt-dlp/issues/16021)) by [0xvd](https://github.com/0xvd)
+- **vk**
+    - [Support new embed page API format](https://github.com/yt-dlp/yt-dlp/commit/4e0e5e092bc4c7bd5864476cea01ab7082a370e6) by [pukkandan](https://github.com/pukkandan)
+    - [Support new embed page API format](https://github.com/yt-dlp/yt-dlp/commit/299f8ffaf007cc0046af1e4c37c48968f167b8d8) by [pukkandan](https://github.com/pukkandan)
+
+#### Downloader changes
+- **aria2c**: [Harden RPC progress tracking](https://github.com/yt-dlp/yt-dlp/commit/6b05e7de385783a6b0d4a72c51befbdb9bce03b1) by [pukkandan](https://github.com/pukkandan)
+
 ### 2026.02.21
 
 #### Important changes
