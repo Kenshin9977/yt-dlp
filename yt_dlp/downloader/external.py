@@ -422,6 +422,7 @@ class Aria2cFD(ExternalFD):
 
             self._hook_progress(status, info_dict)
             retval = p.poll()
+            idle_since = None
             while retval is None:
                 try:
                     # Ref: https://aria2.github.io/manual/en/html/aria2c.html#aria2.tellActive
@@ -458,6 +459,19 @@ class Aria2cFD(ExternalFD):
                         send_rpc('aria2.shutdown')
                     retval = p.wait()
                     break
+
+                # Detect stall: no active downloads and no completed downloads
+                if not active and not completed:
+                    if idle_since is None:
+                        idle_since = time.time()
+                    elif time.time() - idle_since > 10:
+                        self.to_screen('[aria2c] RPC reports no active or completed downloads, shutting down')
+                        with contextlib.suppress(ConnectionError):
+                            send_rpc('aria2.shutdown')
+                        retval = p.wait()
+                        break
+                else:
+                    idle_since = None
 
                 time.sleep(0.1)
                 retval = p.poll()
