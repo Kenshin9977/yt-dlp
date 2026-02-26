@@ -338,7 +338,6 @@ class TestAria2cRPCProgress(unittest.TestCase):
             self.assertIsNotNone(s.get('total_bytes'))
             self.assertIsNotNone(s.get('eta'))
 
-
     def test_fragmented_download_progress(self):
         with FakeYDL() as ydl:
             dl = Aria2cFD(ydl, {})
@@ -405,7 +404,6 @@ class TestAria2cRPCProgress(unittest.TestCase):
             self.assertTrue(len(active_statuses) > 0)
             self.assertIsNone(active_statuses[0]['total_bytes'])
             self.assertIsNotNone(active_statuses[0].get('total_bytes_estimate'))
-
 
     def test_eta_none_when_total_unknown(self):
         """ETA must be None when total size is unknown (not crash with TypeError)."""
