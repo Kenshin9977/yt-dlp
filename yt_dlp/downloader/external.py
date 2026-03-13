@@ -12,6 +12,7 @@ import uuid
 
 from .fragment import FragmentFD
 from ..networking import Request
+from ..networking.exceptions import TransportError
 from ..postprocessor.ffmpeg import (
     EXT_TO_OUT_FORMATS,
     FFmpegPostProcessor,
@@ -372,7 +373,7 @@ class Aria2cFD(ExternalFD):
         try:
             with self.ydl.urlopen(request) as r:
                 resp = json.load(r)
-        except (OSError, ValueError) as e:
+        except (OSError, TransportError, ValueError) as e:
             raise ConnectionError(f'aria2c RPC {method} failed: {e}')
         if resp.get('id') != sanitycheck:
             raise ConnectionError('aria2c RPC response ID mismatch')
@@ -416,6 +417,10 @@ class Aria2cFD(ExternalFD):
                     time.sleep(0.1)
 
             if not rpc_ready:
+                if p.poll() is not None:
+                    _, stderr = p.communicate()
+                    self.to_screen(f'[aria2c] Process exited early (code {p.returncode}): {stderr.strip()}')
+                    return '', stderr, p.returncode
                 self.to_screen('[aria2c] RPC server not available, progress tracking disabled')
                 _, stderr = p.communicate()
                 return '', stderr, p.returncode
