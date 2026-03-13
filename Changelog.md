@@ -4,6 +4,32 @@
 # To create a release, dispatch the https://github.com/yt-dlp/yt-dlp/actions/workflows/release.yml workflow on master
 -->
 
+### 2026.03.13.160948
+
+#### Core changes
+- [Merge branch 'ffmpeg-progress-tracking' into package](https://github.com/yt-dlp/yt-dlp/commit/6a37fe8e8ba922db903c317b03c72b763ddcb86a) by [pukkandan](https://github.com/pukkandan)
+- [Merge branch 'ffmpeg-progress-tracking' into package](https://github.com/yt-dlp/yt-dlp/commit/f0bb76cbabd7cc158d410d09ac035475f96e7011) by [pukkandan](https://github.com/pukkandan)
+- [Merge branch 'master' into package](https://github.com/yt-dlp/yt-dlp/commit/12083b9d3d793f64059327b10d999882b4e8ab8a) by [pukkandan](https://github.com/pukkandan)
+- [Merge branch 'master' into package](https://github.com/yt-dlp/yt-dlp/commit/3c9cfc6edbee4b272d7e7c7e592c90112ed2c706) by [pukkandan](https://github.com/pukkandan)
+- [Merge branch 'master' into package](https://github.com/yt-dlp/yt-dlp/commit/be71e4955a374694c05036c1e4ca137269bae23e) by [pukkandan](https://github.com/pukkandan)
+- [Merge remote-tracking branch 'upstream/master'](https://github.com/yt-dlp/yt-dlp/commit/90c95611af14116d8bb08a9b97b4112a74c157be) by [pukkandan](https://github.com/pukkandan)
+- [Merge remote-tracking branch 'upstream/master'](https://github.com/yt-dlp/yt-dlp/commit/b4438fe6e70241e16eeddecda00c3dd29376292d) by [pukkandan](https://github.com/pukkandan)
+- [Merge remote-tracking branch 'upstream/master'](https://github.com/yt-dlp/yt-dlp/commit/5515f353e3a0eef728bba0dad67dfde196df0ce4) by [pukkandan](https://github.com/pukkandan)
+- **aria2c**
+    - [Broaden RPC exception handling to catch all errors](https://github.com/yt-dlp/yt-dlp/commit/24b042391c4af9b60bb9bf6a4798e1affabf2048) by [pukkandan](https://github.com/pukkandan)
+    - [Fix TransportError crash in RPC communication](https://github.com/yt-dlp/yt-dlp/commit/ad5b426d1e4b8d0b6bf18ef2860403607ed28c8e) by [pukkandan](https://github.com/pukkandan)
+
+#### Extractor changes
+- **tiktok**: [Fix challenge solving](https://github.com/yt-dlp/yt-dlp/commit/db62e438a15743b156ca5ebfc6dbe160e9bc1662) ([#16223](https://github.com/yt-dlp/yt-dlp/issues/16223)) by [bashonly](https://github.com/bashonly)
+- **youtube**
+    - [Fix `android_vr` player client](https://github.com/yt-dlp/yt-dlp/commit/ff459e5fc04b1a061212672626b7bfa23ff3cdcd) ([#16168](https://github.com/yt-dlp/yt-dlp/issues/16168)) by [gamer191](https://github.com/gamer191)
+    - [Fix `use_ad_playback_context` extractor-arg](https://github.com/yt-dlp/yt-dlp/commit/7e145ac1cae8f891e18c9375fa23097f1dfa0b19) ([#16196](https://github.com/yt-dlp/yt-dlp/issues/16196)) by [bashonly](https://github.com/bashonly)
+    - [Fix `web_embedded` player client](https://github.com/yt-dlp/yt-dlp/commit/f2bd3202c0ffa3f0c0069c44ca53b625dca568bc) ([#16177](https://github.com/yt-dlp/yt-dlp/issues/16177)) by [bashonly](https://github.com/bashonly), [SparseOrnament15](https://github.com/SparseOrnament15)
+    - [Request `web_safari` & `web_creator` client configs](https://github.com/yt-dlp/yt-dlp/commit/48a61d0f38b156785d24df628d42892441e008c4) ([#16198](https://github.com/yt-dlp/yt-dlp/issues/16198)) by [bashonly](https://github.com/bashonly)
+    - tab
+        - [Fix album extraction](https://github.com/yt-dlp/yt-dlp/commit/ae025da02364f4d085953f41fd0d32ade3c4afb9) ([#16041](https://github.com/yt-dlp/yt-dlp/issues/16041)) by [FriederHannenheim](https://github.com/FriederHannenheim)
+        - [Improve description extraction](https://github.com/yt-dlp/yt-dlp/commit/3e36cf9cdb12ef566416c5620a1a95b5a0221017) ([#16057](https://github.com/yt-dlp/yt-dlp/issues/16057)) by [Peter-Devine](https://github.com/Peter-Devine)
+
 ### 2026.03.03
 
 #### Extractor changes
