@@ -12,7 +12,6 @@ import uuid
 
 from .fragment import FragmentFD
 from ..networking import Request
-from ..networking.exceptions import TransportError
 from ..postprocessor.ffmpeg import (
     EXT_TO_OUT_FORMATS,
     FFmpegPostProcessor,
@@ -373,7 +372,7 @@ class Aria2cFD(ExternalFD):
         try:
             with self.ydl.urlopen(request) as r:
                 resp = json.load(r)
-        except (OSError, TransportError, ValueError) as e:
+        except Exception as e:
             raise ConnectionError(f'aria2c RPC {method} failed: {e}')
         if resp.get('id') != sanitycheck:
             raise ConnectionError('aria2c RPC response ID mismatch')
